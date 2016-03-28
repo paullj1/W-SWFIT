@@ -24,7 +24,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	__int64* start_addr;
 	DWORD size_of_ntdsa;
 	DWORD aProcesses[1024], cbNeeded, cProcesses;
-	TCHAR *sProcesses[1024];
 	TCHAR szProcessName[MAX_PATH] = TEXT("<unknown>");
 	unsigned int i;
 
@@ -41,6 +40,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	cout << "Running Processes" << endl;
 	printf("%-6s %-*s\n", "PID", dwidth-7, "Process");
+	cout << string(6, '-') << " " << string(dwidth - 7, '-') << endl;
 	cProcesses = cbNeeded / sizeof(DWORD);
 	for (i = 0; i < cProcesses; i++) {
 		if (aProcesses[i] != 0) {
@@ -53,7 +53,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
 				}
 
 				_tprintf(TEXT("%6u %-*s\n"), aProcesses[i], dwidth-7, szProcessName);
-				sProcesses[i] = szProcessName;
 				CloseHandle(hProc);
 			}
 		}
@@ -61,7 +60,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	// Which process?
 	int pid = 0;
-	cout << "Into which process would you like to inject faults? [PID]: ";
+	cout << endl << "Into which process would you like to inject faults? [PID]: ";
 	cin >> pid;
 
 	HANDLE hTarget = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
@@ -70,24 +69,11 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		return -1;
 	}
 
-	// Get Process Image File Name
-	TCHAR *filename = NULL;
-	for (i = 0; i < sizeof(aProcesses); i++) {
-		if (aProcesses[i] == pid) {
-			filename = sProcesses[i];
-		}
-	}
-
-	if (filename == NULL) {
-		cout << "Failed to locate selected PID's name: " << GetLastError() << endl;
-		CloseHandle(hTarget);
-		return -1;
-	}
-
 	// Enumerate modules within process
 	HMODULE hmods[1024];
-	cout << "DLLs currently loaded in " << filename << ":" << endl;
+	cout << "DLLs currently loaded in target process:" << endl;
 	printf("%-4s %-*s\n", "ID", dwidth-5, "Module Name:");
+	cout << string(4, '-') << " " << string(dwidth - 5, '-') << endl;
 	if (EnumProcessModules(hTarget, hmods, sizeof(hmods), &cbNeeded)) {
 		for (i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) {
 			TCHAR szModName[MAX_PATH];
