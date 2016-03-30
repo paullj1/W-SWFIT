@@ -15,14 +15,15 @@
 #include <tchar.h>
 
 bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, int start, size_t stop, int *location);
+bool injection_point_one(HANDLE hTarget, __int64 start_addr, byte *buf, size_t size_of_image);
 
 using namespace std;
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
 	// Declarations
-	__int64* start_addr;
-	DWORD size_of_ntdsa;
+	__int64 start_addr;
+	DWORD size_of_image;
 	DWORD aProcesses[1024], cbNeeded, cProcesses;
 	TCHAR szProcessName[MAX_PATH] = TEXT("<unknown>");
 	unsigned int i;
@@ -98,13 +99,14 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	cout << "Dll Information:" << endl;
 	if (GetModuleInformation(hTarget, hmods[mod_id], &lModInfo, sizeof(lModInfo))){
 		cout << "\t Base Addr: " << lModInfo.lpBaseOfDll << endl;
+		cout << "\t Entry Point: " << lModInfo.EntryPoint << endl;
 		cout << "\t Size of image: " << lModInfo.SizeOfImage << endl << endl;
 
-		start_addr = (__int64*)lModInfo.lpBaseOfDll;
-		size_of_ntdsa = lModInfo.SizeOfImage;
+		start_addr = (__int64)lModInfo.lpBaseOfDll;
+		size_of_image = lModInfo.SizeOfImage;
 	}
 
-	byte *buf = (byte *)malloc(size_of_ntdsa);
+	byte *buf = (byte *)malloc(size_of_image);
 	if (!buf) {
 		cout << "Failed to allocate space for memory contents: " << GetLastError() << endl;
 		CloseHandle(hTarget);
@@ -114,7 +116,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	SIZE_T num_bytes_read = 0;
 	int count = 0;
 
-	if (ReadProcessMemory(hTarget, start_addr, buf, size_of_ntdsa, &num_bytes_read) != 0) {
+	if (ReadProcessMemory(hTarget, (__int64 *)start_addr, buf, size_of_image, &num_bytes_read) != 0) {
 		cout << "Buffered memory contents. Got " << num_bytes_read << " bytes." << endl << endl;
 	} else {
 		int error_code = GetLastError();
@@ -141,14 +143,27 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		cout << "Wrote " << bytes_written << " bytes." << endl << endl;
 	}
 
+	// Call fault injection function. Based on manual analysis and selection.
+	if (injection_point_one(hTarget, start_addr, buf, size_of_image)) {
+		cout << "Successful injection. Prepare for blue screen." << endl;
+		CloseHandle(hTarget);
+		free(buf);
+		return 0;
+	}
 
-	// Skip first function
+	CloseHandle(hTarget);
+	free(buf);
+	return -1;
+}
+
+// Operator for missing function call at first instance of function pattern 3
+bool injection_point_one(HANDLE hTarget, __int64 start_addr, byte *buf, size_t size_of_image) {
 	// find_pattern(pattern, size_of_pattern, buf, start, stop, location) 
 	int offset_of_function = 0;
-	if (find_pattern(start_pattern_3, sizeof(start_pattern_3), buf, 0, size_of_ntdsa, &offset_of_function)) {
+	if (find_pattern(start_pattern_3, sizeof(start_pattern_3), buf, 0, size_of_image, &offset_of_function)) {
 
 		int offset_of_exit = 0;
-		if (find_pattern(end_pattern_3, sizeof(end_pattern_3), buf, offset_of_function, size_of_ntdsa, &offset_of_exit)){
+		if (find_pattern(end_pattern_3, sizeof(end_pattern_3), buf, offset_of_function, size_of_image, &offset_of_exit)){
 			printf("Found function starting at: 0x%X, ending at 0x%X\n", offset_of_function, offset_of_exit);
 			int call_offset = 0;
 			if (find_pattern(omfc_1, sizeof(omfc_1), buf, offset_of_function, offset_of_exit, &call_offset)) {
@@ -160,30 +175,25 @@ int _tmain(int argc, _TCHAR* argv[]) {
 				getline(cin, cont);
 
 				if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
-					CloseHandle(hTarget);
-					return 0;
+					cout << "Aborting" << endl;
+					return false;
 				}
 
 				byte nop_array[] = { 0x90, 0x90, 0x90, 0x90 , 0x90, 0x90 };
 				memcpy(buf + call_offset, nop_array, sizeof(nop_array));
 
 				SIZE_T mem_bytes_written = 0;
-				if (WriteProcessMemory(hTarget, start_addr, buf, size_of_ntdsa, &mem_bytes_written) != 0)
-					cout << "Failed to write to memory: " << GetLastError() << endl;
-				else {
-					cout << "Successful injection. Prepare for blue screen." << endl;
-					CloseHandle(hTarget);
-					free(buf);
-					return 0;
+				if (WriteProcessMemory(hTarget, &start_addr, buf, size_of_image, &mem_bytes_written) != 0) {
+					cout << "Failed to inject fault into memory: " << GetLastError() << endl;
+					return false;
+				} else {
+					return true;
 				}
 			}
 		}
 	}
-
-	cout << "Failed to find injection point" << endl;
-	CloseHandle(hTarget);
-	free(buf);
-	return -1;
+	cout << "Failed to find injection point.  Check pattern to make sure it exists in binary." << endl;
+	return false;
 }
 
 // Search 'buf' for 'pattern' at 'start'.  If found, sets 'offset', and returns true.
