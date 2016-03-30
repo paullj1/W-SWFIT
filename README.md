@@ -1,5 +1,4 @@
-.  If the target
-application is a W-SWFIT
+W-SWFIT
 ===
 
 The Windows Software Fault Injection Tool (x64).  This tool implements the
