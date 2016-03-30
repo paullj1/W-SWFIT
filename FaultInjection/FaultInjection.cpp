@@ -14,7 +14,7 @@
 #include <io.h>
 #include <tchar.h>
 
-bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, size_t size_of_buf, int start, int *offset);
+bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, int start, size_t stop, int *location);
 
 using namespace std;
 
@@ -40,7 +40,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	cout << "Running Processes" << endl;
 	printf("%-6s %-*s\n", "PID", dwidth-7, "Process");
-	cout << string(6, '-') << " " << string(dwidth - 7, '-') << endl;
+	cout << string(3, '-') << " " << string(dwidth - 7, '-') << endl;
 	cProcesses = cbNeeded / sizeof(DWORD);
 	for (i = 0; i < cProcesses; i++) {
 		if (aProcesses[i] != 0) {
@@ -59,9 +59,10 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 
 	// Which process?
-	int pid = 0;
+	string s_pid = "";
 	cout << endl << "Into which process would you like to inject faults? [PID]: ";
-	cin >> pid;
+	getline(cin, s_pid);
+	int pid = stoi(s_pid);
 
 	HANDLE hTarget = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
 	if (!hTarget) {
@@ -88,9 +89,10 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 
 	// Which Module?
-	int mod_id = 0;
+	string s_mod_id = "";
 	cout << "Into which module would you like to inject faults? [ID]: ";
-	cin >> mod_id;
+	getline(cin, s_mod_id);
+	int mod_id = stoi(s_mod_id);
 
 	MODULEINFO lModInfo = { 0 };
 	cout << "Dll Information:" << endl;
@@ -139,31 +141,30 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		cout << "Wrote " << bytes_written << " bytes." << endl << endl;
 	}
 
-	// Ready to continue?
-	string cont = "";
-	cout << "Ready to begin fault load.  Continue? [Y|n]: ";
-	cin >> cont;
-	if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
-		CloseHandle(hTarget);
-		return 0;
-	}
-
-
-
-	int offset_of_function = 0;
 
 	// Skip first function
-	find_pattern(start_pattern_6, sizeof(start_pattern_6), buf, size_of_ntdsa, 0, &offset_of_function);
+	// find_pattern(pattern, size_of_pattern, buf, start, stop, location) 
+	int offset_of_function = 0;
+	if (find_pattern(start_pattern_3, sizeof(start_pattern_3), buf, 0, size_of_ntdsa, &offset_of_function)) {
 
-	if (find_pattern(start_pattern_6, sizeof(start_pattern_6), buf, size_of_ntdsa, offset_of_function, &offset_of_function)) {
 		int offset_of_exit = 0;
-		if (find_pattern(end_pattern_6, sizeof(end_pattern_6), buf, size_of_ntdsa, offset_of_function, &offset_of_exit)){
-
-			int size_of_function = offset_of_exit - offset_of_function;
+		if (find_pattern(end_pattern_3, sizeof(end_pattern_3), buf, offset_of_function, size_of_ntdsa, &offset_of_exit)){
+			printf("Found function starting at: 0x%X, ending at 0x%X\n", offset_of_function, offset_of_exit);
 			int call_offset = 0;
+			if (find_pattern(omfc_1, sizeof(omfc_1), buf, offset_of_function, offset_of_exit, &call_offset)) {
 
-			if (find_pattern(omva_1, sizeof(omva_1), buf, size_of_ntdsa, offset_of_function, &call_offset)) {
-				byte nop_array[] = { 0x90, 0x90, 0x90, 0x90, 0x90 };
+				// Ready to continue?
+				string cont = "";
+				printf("Found pattern to replace at: 0x%X\n\n", call_offset);
+				cout << "Ready to begin fault load.  Continue? [Y|n]: ";
+				getline(cin, cont);
+
+				if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
+					CloseHandle(hTarget);
+					return 0;
+				}
+
+				byte nop_array[] = { 0x90, 0x90, 0x90, 0x90 , 0x90, 0x90 };
 				memcpy(buf + call_offset, nop_array, sizeof(nop_array));
 
 				SIZE_T mem_bytes_written = 0;
@@ -186,9 +187,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 }
 
 // Search 'buf' for 'pattern' at 'start'.  If found, sets 'offset', and returns true.
-bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, size_t size_of_buf, int start, int *offset) {
+bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, int start, size_t stop, int *location) {
 
-	for (unsigned int i = start; i < size_of_buf; i++) {
+	for (unsigned int i = start; i < stop; i++) {
 		if (buf[i] == pattern[0]) {
 			for (int j = 1; j < size_of_pattern; j++) {
 				if (buf[i + j] != pattern[j])
@@ -196,7 +197,7 @@ bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, size_
 				if (j < size_of_pattern - 1)
 					continue;
 
-				*offset = i;
+				*location = i;
 				return true;
 			}
 		}
