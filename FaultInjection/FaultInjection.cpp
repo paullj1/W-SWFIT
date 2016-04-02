@@ -15,7 +15,8 @@
 #include <tchar.h>
 
 bool find_pattern(const byte pattern[], size_t size_of_pattern, byte *buf, int start, size_t stop, int *location);
-bool injection_point_one(HANDLE hTarget, __int64 start_addr, byte *buf, size_t size_of_image);
+int injection_point_one(__int64 start_addr, byte *buf, size_t size_of_image);
+int injection_point_two(__int64 start_addr, byte *buf, size_t size_of_image);
 
 using namespace std;
 
@@ -144,11 +145,36 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 
 	// Call fault injection function. Based on manual analysis and selection.
-	if (injection_point_one(hTarget, start_addr, buf, size_of_image)) {
-		cout << "Successful injection. Prepare for blue screen." << endl;
-		CloseHandle(hTarget);
-		free(buf);
-		return 0;
+	int call_offset = injection_point_one(start_addr, buf, size_of_image);
+	if (call_offset > 0) {
+
+		// Ready to continue?
+		string cont = "";
+		printf("Found pattern to replace at: 0x%X\n\n", call_offset);
+		cout << "Ready to begin fault load.  Continue? [Y|n]: ";
+		getline(cin, cont);
+
+		if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
+			cout << "Aborting" << endl;
+			return false;
+		}
+
+		byte nop_array[] = { 0x90, 0x90, 0x90, 0x90 , 0x90, 0x90 };
+		memcpy(buf + call_offset, nop_array, sizeof(nop_array));
+
+		SIZE_T mem_bytes_written = 0;
+		if (WriteProcessMemory(hTarget, (LPVOID)(start_addr + call_offset), nop_array, sizeof(nop_array), &mem_bytes_written) != 0) {
+			cout << "Bytes written: " << mem_bytes_written << endl;
+			cout << "Successful injection. Prepare for blue screen." << endl;
+			CloseHandle(hTarget);
+			free(buf);
+			return 0;
+		} else {
+			cout << "Failed to inject fault into memory: " << GetLastError() << endl;
+			CloseHandle(hTarget);
+			free(buf);
+			return -1;
+		}
 	}
 
 	CloseHandle(hTarget);
@@ -156,39 +182,39 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	return -1;
 }
 
-// Operator for missing function call at first instance of function pattern 3
-bool injection_point_one(HANDLE hTarget, __int64 start_addr, byte *buf, size_t size_of_image) {
+// Operator for missing function call 3 at first instance of function pattern 4 in esent.dll
+int injection_point_two(__int64 start_addr, byte *buf, size_t size_of_image) {
+	// find_pattern(pattern, size_of_pattern, buf, start, stop, location) 
+	int offset_of_function = 0;
+	if (find_pattern(start_pattern_4, sizeof(start_pattern_4), buf, 0, size_of_image, &offset_of_function)) {
+
+		int offset_of_exit = 0;
+		if (find_pattern(end_pattern_4, sizeof(end_pattern_4), buf, offset_of_function, size_of_image, &offset_of_exit)){
+
+			printf("Found function starting at: 0x%X, ending at 0x%X\n", offset_of_function, offset_of_exit);
+			int call_offset = 0;
+			if (find_pattern(omfc_3, sizeof(omfc_3), buf, offset_of_function, offset_of_exit, &call_offset)) {
+				return call_offset;
+			}
+		}
+	}
+	cout << "Failed to find injection point.  Check pattern to make sure it exists in binary." << endl;
+	return -1;
+}
+
+// Operator for missing function call 1 at first instance of function pattern 3 in ntdsa.dll
+int injection_point_one(__int64 start_addr, byte *buf, size_t size_of_image) {
 	// find_pattern(pattern, size_of_pattern, buf, start, stop, location) 
 	int offset_of_function = 0;
 	if (find_pattern(start_pattern_3, sizeof(start_pattern_3), buf, 0, size_of_image, &offset_of_function)) {
 
 		int offset_of_exit = 0;
 		if (find_pattern(end_pattern_3, sizeof(end_pattern_3), buf, offset_of_function, size_of_image, &offset_of_exit)){
+
 			printf("Found function starting at: 0x%X, ending at 0x%X\n", offset_of_function, offset_of_exit);
 			int call_offset = 0;
 			if (find_pattern(omfc_1, sizeof(omfc_1), buf, offset_of_function, offset_of_exit, &call_offset)) {
-
-				// Ready to continue?
-				string cont = "";
-				printf("Found pattern to replace at: 0x%X\n\n", call_offset);
-				cout << "Ready to begin fault load.  Continue? [Y|n]: ";
-				getline(cin, cont);
-
-				if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
-					cout << "Aborting" << endl;
-					return false;
-				}
-
-				byte nop_array[] = { 0x90, 0x90, 0x90, 0x90 , 0x90, 0x90 };
-				memcpy(buf + call_offset, nop_array, sizeof(nop_array));
-
-				SIZE_T mem_bytes_written = 0;
-				if (WriteProcessMemory(hTarget, &start_addr, buf, size_of_image, &mem_bytes_written) != 0) {
-					cout << "Failed to inject fault into memory: " << GetLastError() << endl;
-					return false;
-				} else {
-					return true;
-				}
+				return call_offset;
 			}
 		}
 	}
