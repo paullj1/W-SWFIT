@@ -26,3 +26,9 @@ Then in the new console window:
 Contact
 ---
 [Paul Jordan](mailto:paul.jordan@afit.edu)
+
+Disclaimer
+---
+The views expressed herein are solely those of the authors and do not reflect
+the official policy or position of the U.S. Air Force, the Department of
+Defense, or the U.S. Government.
