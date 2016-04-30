@@ -40,15 +40,14 @@ bool Function::build_injection_points() {
 
 // Returns address of injection point for "Operator for Missing Function Call (OMFC)"
 bool Function::find_operators_mfc() {
-	// Patterns found
-	const byte omfc_1[] = { 0xff, 0x15, 0xd4, 0xee, 0x00, 0x00 };
-	const byte omfc_2[] = { 0xff, 0xd0 };
-	const byte omfc_3[] = { 0xff, 0x15, 0xbd, 0xa4, 0x1c, 0x00 };
+
+	const byte omfc[] = { 0xff, 0x15 }; // x64 CALL instruction
 
 	vector < Operator *> list_of_omfc = vector < Operator *>();
-	list_of_omfc.push_back(new Operator(omfc_1, sizeof(omfc_1)));
-	list_of_omfc.push_back(new Operator(omfc_2, sizeof(omfc_2)));
-	list_of_omfc.push_back(new Operator(omfc_3, sizeof(omfc_3)));
+	list_of_omfc.push_back(new Operator(omfc, sizeof(omfc)));
+
+	const byte eax[] = { 0x8b, 0xd8 }; // MOV EBX, EAX
+	Operator *pEAX = new Operator(eax, sizeof(eax));
 
 	// Check for each function type
 	for (vector < Operator *>::iterator it = list_of_omfc.begin();
@@ -58,9 +57,20 @@ bool Function::find_operators_mfc() {
 		DWORD64 current_offset = 0;
 		DWORD64 start = 0;
 		while (find_pattern(*it, start, size, &current_offset)) {
-			// TODO:  Check constraints
-			local_injection_points[start_addr + current_offset] = *it;
 			start = current_offset + 1;
+
+			// Constraint 1 (C01):  Return value of the funciton (EAX) must not be used.
+			if (current_offset + 16 < size && 
+				find_pattern(pEAX, current_offset + 6, current_offset + 10, NULL)) // MOV EBX, EAX
+				continue;
+
+			// Constraint 2 (C02):  Call must not be only statement in the block (size > size of entry + size of exit + 16)
+			if (size < 16) continue;
+
+			// Doesn't violate any of the OMFC constraints, add it
+			byte mfc[] = { 0xff, 0x15, 0x00, 0x00, 0x00, 0x00 };
+			Operator *op = new Operator(mfc, sizeof(mfc));
+			local_injection_points[start_addr + current_offset] = op;
 		}
 	}
 	return true;
@@ -78,7 +88,7 @@ bool Function::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *
 				if (j < op->size() - 1)
 					continue;
 
-				*offset = i;
+				if (offset) *offset = i;
 				return true;
 			}
 		}

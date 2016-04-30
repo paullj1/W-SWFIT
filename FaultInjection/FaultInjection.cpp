@@ -10,6 +10,8 @@
 
 using namespace std;
 
+bool SendSyslog();
+
 int _tmain(int argc, _TCHAR* argv[]) {
 
 	// Declarations
@@ -109,9 +111,54 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	// Save library for future static analysis
 	library->write_library_to_disk("C:\\memdump.dll");
 
-	// Inject omfc_1 into first instance of pattern_3
 	library->inject();
-	// Inject omfc_3 into first instance of pattern_4
+
+	// Send syslog message
+	SendSyslog();
 
 	return 0;
+}
+
+bool SendSyslog() {
+	WSADATA wsaData;
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != NO_ERROR) {
+		cerr << "Couldn't send syslog message" << endl;
+		return false;
+	}
+
+	SOCKET ConnectSocket;
+	ConnectSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (ConnectSocket == INVALID_SOCKET) {
+		cerr << "Couldn't send syslog message" << endl;
+		WSACleanup();
+		return false;
+	}
+
+	sockaddr_in clientService;
+	clientService.sin_family = AF_INET;
+	clientService.sin_addr.s_addr = inet_addr("192.168.224.7");
+	clientService.sin_port = htons(514);
+	
+	iResult = connect(ConnectSocket, (SOCKADDR *)&clientService, sizeof(clientService));
+	if (iResult == SOCKET_ERROR) {
+		cerr << "Couldn't send syslog message" << endl;
+		closesocket(ConnectSocket);
+		WSACleanup();
+		return false;
+	}
+
+	char *sendbuf = "FAULT_INJECTED_SUCCESSFULLY";
+	iResult = send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0);
+	if (iResult == SOCKET_ERROR) {
+		cerr << "Couldn't send syslog message" << endl;
+		closesocket(ConnectSocket);
+		WSACleanup();
+		return false;
+	}
+	cout << "Successfully sent syslog message" << endl;
+
+	closesocket(ConnectSocket);
+	WSACleanup();
+	return true;
 }

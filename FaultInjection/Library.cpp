@@ -103,9 +103,8 @@ bool Library::find_functions() {
 
 			DWORD64 end = 0;
 			if (find_pattern(it->second, begin, image_size, &end)) {
-
-				functions.push_back(new Function(hTarget, start_addr + begin, 
-												 start_addr + end, &buf[begin]));
+				functions.push_back(new Function(hTarget, start_addr + begin + (it->first)->size(), 
+												 start_addr + end - (it->second)->size(), &buf[begin]));
 			}
 			begin++;
 		}
