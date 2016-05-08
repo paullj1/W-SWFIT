@@ -25,7 +25,8 @@ Then in the new console window:
 
 Contact
 ---
-[Paul Jordan](mailto:paul.jordan@afit.edu)
+[Paul Jordan](mailto:paullj1@gmail.com)
+
 
 Disclaimer
 ---

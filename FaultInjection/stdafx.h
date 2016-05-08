@@ -7,6 +7,10 @@
 
 #include "targetver.h"
 
+#include <WinSock2.h>
+#include <Ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+
 #include <stdio.h>
 #include <tchar.h>
 
