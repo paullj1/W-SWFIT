@@ -13,13 +13,7 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include "mingw.thread.h"
-
-#include <stdlib.h>
-#include <chrono>
-#include <vector>
-#include <thread>
-
+#include "globals.hpp"
 #include "resource.hpp"
 
 using namespace std;

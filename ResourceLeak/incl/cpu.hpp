@@ -13,12 +13,7 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include "mingw.thread.h"
-
-#include <stdlib.h>
-#include <chrono>
-#include <thread>
-
+#include "globals.hpp"
 #include "resource.hpp"
 
 using namespace std;

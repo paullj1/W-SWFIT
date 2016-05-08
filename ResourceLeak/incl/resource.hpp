@@ -14,6 +14,8 @@
 #ifndef RESOURCE_H
 #define RESOURCE_H
 
+#include "globals.hpp"
+
 class Resource {
   public:
     virtual bool start(int rate) = 0;
