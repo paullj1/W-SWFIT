@@ -21,16 +21,20 @@ class Function {
 		bool inject();
 
 	private:
-		map < DWORD64, Operator *> local_injection_points; // Address -> Operator
+		map < DWORD64, Operator *> local_injection_points; // Address -> NOP Sequence
 		DWORD64 start_addr = 0;
 		DWORD64 end_addr = 0;
 		byte *buf;
 		DWORD64 size = 0;
 		HANDLE hTarget;  // Managed by Library (don't close it here)
 
+		// Capstone Buffer
+		cs_insn *code_buf;
+		size_t cs_count = 0;
+		csh cs_handle;
+
 		bool build_injection_points();
 		bool perform_injection(DWORD64 addr);
-		bool find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *offset);
 		bool inject(Operator *op, DWORD64 addr);
 
 		// Build map of injectable points

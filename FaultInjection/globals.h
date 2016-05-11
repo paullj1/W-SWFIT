@@ -12,4 +12,7 @@
 #include <fstream>
 #include <io.h>
 
+#include <capstone.h>
+#include <inttypes.h>
+
 #endif

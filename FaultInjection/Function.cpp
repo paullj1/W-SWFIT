@@ -10,13 +10,30 @@ Function::Function(HANDLE _target, DWORD64 _start, DWORD64 _end, byte *_code) {
 	size = end_addr - start_addr;
 	buf = _code;
 	local_injection_points = map < DWORD64, Operator *>();
+
+	// Build Capstone (CS) Array of code
+	if (cs_open(CS_ARCH_X86, CS_MODE_64, &cs_handle) != CS_ERR_OK)
+		cerr << "Error disassembling code." << endl;
+
+	// Enable op details
+	cs_option(cs_handle, CS_OPT_DETAIL, CS_OPT_ON);
+	//cs_option(cs_handle, CS_OP_DETAIL, CS_OPT_ON);
+
+	cs_count = cs_disasm(cs_handle, buf, size, start_addr, 0, &code_buf);
+	if (cs_count == 0)
+		cerr << "Error disassembling code." << endl;
+
+
+	// Build Injection points based on disassembled code
 	build_injection_points();
 }
 
-Function::~Function() { }
+Function::~Function() { 
+	cs_close(&cs_handle);
+	cs_free(code_buf, size);
+}
 
 // Public Functions
-
 bool Function::inject() {
 	// For each injection point in the funciton, ask the user if they would like to inject
 	for (map<DWORD64, Operator *>::iterator it = local_injection_points.begin();
@@ -41,59 +58,33 @@ bool Function::build_injection_points() {
 // Returns address of injection point for "Operator for Missing Function Call (OMFC)"
 bool Function::find_operators_mfc() {
 
-	const byte omfc[] = { 0xff, 0x15 }; // x64 CALL instruction
+	// Constraint 2 (C02):  Call must not be only statement in the block (size > size of entry + size of exit + 16)
+	if (cs_count < 6) return false;
 
-	vector < Operator *> list_of_omfc = vector < Operator *>();
-	list_of_omfc.push_back(new Operator(omfc, sizeof(omfc)));
-
-	const byte eax[] = { 0x8b, 0xd8 }; // MOV EBX, EAX
-	Operator *pEAX = new Operator(eax, sizeof(eax));
-
-	// Check for each function type
-	for (vector < Operator *>::iterator it = list_of_omfc.begin();
-			it != list_of_omfc.end(); ++it) {
-
-		// Iterate through entire peice of code
-		DWORD64 current_offset = 0;
-		DWORD64 start = 0;
-		while (find_pattern(*it, start, size, &current_offset)) {
-			start = current_offset + 1;
-
-			// Constraint 1 (C01):  Return value of the funciton (EAX) must not be used.
-			if (current_offset + 16 < size && 
-				find_pattern(pEAX, current_offset + 6, current_offset + 10, NULL)) // MOV EBX, EAX
-				continue;
-
-			// Constraint 2 (C02):  Call must not be only statement in the block (size > size of entry + size of exit + 16)
-			if (size < 16) continue;
+	for (size_t j = 0; j < cs_count; j++) {
+		if (string(code_buf[j].mnemonic).find("call") != string::npos){
+			// Constraint 1 (C01):  Return value of the function (EAX) must not be used.
+			bool constraint01 = false;
+			for (size_t i = j + 1; i < cs_count; i++) {
+				cs_detail *details = code_buf[i].detail;
+				if (code_buf[i].detail) {
+					for (size_t k = 0; k < details->regs_read_count; k++) {
+						string modreg = string(cs_reg_name(cs_handle, details->regs_read[k]));
+						if (modreg.find("eax") != string::npos || modreg.find("rax") != string::npos)
+							constraint01 = true;
+					}
+				}
+			}
 
 			// Doesn't violate any of the OMFC constraints, add it
-			byte mfc[] = { 0xff, 0x15, 0x00, 0x00, 0x00, 0x00 };
-			Operator *op = new Operator(mfc, sizeof(mfc));
-			local_injection_points[start_addr + current_offset] = op;
-		}
-	}
-	return true;
-}
-
-// Search 'buf' for 'pattern' at 'start'.  If found, sets 'offset', and returns true.
-bool Function::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *offset) {
-
-	const byte *pattern = op->pattern();
-	for (DWORD64 i = start; i < stop; i++) {
-		if (buf[i] == pattern[0]) {
-			for (int j = 1; j < op->size(); j++) {
-				if (buf[i + j] != pattern[j])
-					break;
-				if (j < op->size() - 1)
-					continue;
-
-				if (offset) *offset = i;
-				return true;
+			if (!constraint01) {
+				Operator *op = new Operator(code_buf[j].bytes, code_buf[j].size);
+				local_injection_points[code_buf[j].address] = op;
 			}
 		}
 	}
-	return false;
+		//printf("0x%"PRIx64":\t%s\t\t%s\n", code_buf[j].address, code_buf[j].mnemonic, code_buf[j].op_str);
+	return true;
 }
 
 bool Function::inject(Operator *op, DWORD64 addr) {
