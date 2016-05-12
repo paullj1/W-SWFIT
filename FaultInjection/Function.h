@@ -39,6 +39,7 @@ class Function {
 
 		// Build map of injectable points
 		bool find_operators_mfc();
+		bool find_operators_ompla();
 
 };
 

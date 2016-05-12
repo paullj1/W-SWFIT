@@ -49,21 +49,50 @@ bool Function::inject() {
 // Private Functions
 bool Function::build_injection_points() {
 	find_operators_mfc();
+	//find_operators_ompla();
 
 	// TODO: Other operators
 
 	return true;
 }
 
+// Returns address of injection point for "Operator of Missing Localize Part of the Algorithm (OMPLA)"
+bool Function::find_operators_ompla() {
+
+	// Constraint 2 (C02):  Call must not be only statement in the block
+	if (cs_count < 10) return false;
+
+	for (size_t j = 0; j < cs_count; j++) {
+		if (string(code_buf[j].mnemonic).find("mov") != string::npos){
+
+			// Constraint 10: Statements must be in the same block and do not include loops
+			size_t c = 0;
+			for (size_t i = j + 1; i < cs_count; i++)
+				if (string(code_buf[j].mnemonic).find("mov") != string::npos) {
+					c++;
+					continue;
+				}
+
+			if (c > 2 && c <= 5) {
+				// Doesn't violate any of the OMPLA constraints, add it
+				Operator *op = new Operator(code_buf[j].bytes, code_buf[j].size);
+				local_injection_points[code_buf[j].address] = op;
+			}
+		}
+	}
+	return true;
+}
+
 // Returns address of injection point for "Operator for Missing Function Call (OMFC)"
 bool Function::find_operators_mfc() {
 
-	// Constraint 2 (C02):  Call must not be only statement in the block (size > size of entry + size of exit + 16)
+	// Constraint 2 (C02):  Call must not be only statement in the block
 	if (cs_count < 6) return false;
 
 	for (size_t j = 0; j < cs_count; j++) {
 		if (string(code_buf[j].mnemonic).find("call") != string::npos){
-			// Constraint 1 (C01):  Return value of the function (EAX) must not be used.
+			cout << "Adding function call" << endl;
+			// Constraint 1 (C01):  Return value of the function (EAX/RAX) must not be used.
 			bool constraint01 = false;
 			for (size_t i = j + 1; i < cs_count; i++) {
 				cs_detail *details = code_buf[i].detail;
@@ -83,7 +112,6 @@ bool Function::find_operators_mfc() {
 			}
 		}
 	}
-		//printf("0x%"PRIx64":\t%s\t\t%s\n", code_buf[j].address, code_buf[j].mnemonic, code_buf[j].op_str);
 	return true;
 }
 
