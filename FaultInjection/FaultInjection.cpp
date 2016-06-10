@@ -11,6 +11,7 @@
 using namespace std;
 
 bool SendSyslog();
+char* GetAddressOfData(HANDLE process, const char *data, size_t len);
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -31,7 +32,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	int dwidth = csbi.srWindow.Right - csbi.srWindow.Left;
 
 	cout << "Running Processes" << endl;
-	printf("%-6s %-*s\n", "PID", dwidth-7, "Process");
+	printf("%-6s %-*s\n", "PID", dwidth - 7, "Process");
 	cout << string(3, '-') << " " << string(dwidth - 7, '-') << endl;
 	cProcesses = cbNeeded / sizeof(DWORD);
 	for (i = 0; i < cProcesses; i++) {
@@ -44,7 +45,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 					GetModuleBaseName(hProc, hMod, szProcessName, sizeof(szProcessName) / sizeof(TCHAR));
 				}
 
-				_tprintf(TEXT("%6u %-*s\n"), aProcesses[i], dwidth-7, szProcessName);
+				_tprintf(TEXT("%6u %-*s\n"), aProcesses[i], dwidth - 7, szProcessName);
 				CloseHandle(hProc);
 			}
 		}
@@ -60,6 +61,47 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	if (!hTarget) {
 		cerr << "Failed to open process (check your privilege): " << GetLastError() << endl;
 		return -1;
+	}
+
+	// Fault Injection or Memory Corruptions?
+	string s_fivsmc = "";
+	cout << endl << "Would you like to inject Faults, or corrupt Memory? [f|m]: ";
+	getline(cin, s_fivsmc);
+	if (s_fivsmc.find("m") != string::npos){
+
+		string s_query = "";
+		cout << endl << "What are you looking for in process memory?: ";
+		getline(cin, s_query);
+
+		char* ret = GetAddressOfData(hTarget, s_query.c_str(), s_query.length());
+		if (ret) {
+			cout << "Found at addr: " << (void*)ret << endl;
+			size_t bytesRead;
+			size_t sizeToRead = s_query.size();
+			char *buf = (char *)malloc(sizeToRead + 1);
+			ReadProcessMemory(hTarget, ret, buf, sizeToRead, &bytesRead);
+			buf[sizeToRead] = '\0';
+
+			cout << "Num bytes read: " << bytesRead << endl;
+			cout << "Contents: " << string(buf) << endl;
+
+			// Overwrite it
+			byte *null_array = (byte *)malloc(bytesRead);
+			fill_n(null_array, bytesRead, 0x00);
+
+			SIZE_T mem_bytes_written = 0;
+			if (WriteProcessMemory(hTarget, (LPVOID)ret, null_array, bytesRead, &mem_bytes_written) != 0) {
+				cout << "Bytes written: " << mem_bytes_written << endl;
+				cout << "Successful corruption." << endl;
+				return 0;
+			} else {
+				cerr << "Failed to corrupt memory: " << GetLastError() << endl;
+				return -1;
+			}
+		} else {
+			cout << "Not found" << endl;
+		}
+		return 0;
 	}
 
 	// Enumerate modules within process
@@ -89,7 +131,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	MODULEINFO lModInfo = { 0 };
 	cout << "Dll Information:" << endl;
 	if (GetModuleInformation(hTarget, hmods[mod_id], &lModInfo, sizeof(lModInfo))){
-
 
 		cout << "\t Base Addr: " << lModInfo.lpBaseOfDll << endl;
 		cout << "\t Entry Point: " << lModInfo.EntryPoint << endl;
@@ -162,3 +203,32 @@ bool SendSyslog() {
 	WSACleanup();
 	return true;
 }
+
+char* GetAddressOfData(HANDLE process, const char *data, size_t len) {
+
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+
+	MEMORY_BASIC_INFORMATION info;
+	vector<char> chunk;
+	char* p = 0;
+	while(p < si.lpMaximumApplicationAddress) {
+
+	  if(VirtualQueryEx(process, p, &info, sizeof(info)) == sizeof(info)) {
+
+		p = (char*)info.BaseAddress;
+		chunk.resize(info.RegionSize);
+		SIZE_T bytesRead;
+
+		if(ReadProcessMemory(process, p, &chunk[0], info.RegionSize, &bytesRead)) 
+		  for(size_t i = 0; i < (bytesRead - len); ++i) 
+			if(memcmp(data, &chunk[i], len) == 0)
+			  return (char*)p + i;
+			 
+		p += info.RegionSize;
+		
+	  }
+	}
+	return 0;
+}
+

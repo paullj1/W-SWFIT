@@ -91,7 +91,6 @@ bool Function::find_operators_mfc() {
 
 	for (size_t j = 0; j < cs_count; j++) {
 		if (string(code_buf[j].mnemonic).find("call") != string::npos){
-			cout << "Adding function call" << endl;
 			// Constraint 1 (C01):  Return value of the function (EAX/RAX) must not be used.
 			bool constraint01 = false;
 			for (size_t i = j + 1; i < cs_count; i++) {
@@ -129,13 +128,33 @@ bool Function::inject(Operator *op, DWORD64 addr) {
 	}
 
 	byte *nop_array = (byte *)malloc(op->size());
+	byte *tmp_buf = (byte *)malloc(op->size());
 	fill_n(nop_array, op->size(), 0x90);
 
 	SIZE_T mem_bytes_written = 0;
 	if (WriteProcessMemory(hTarget, (LPVOID)addr, nop_array, op->size(), &mem_bytes_written) != 0) {
-		cout << "Bytes written: " << mem_bytes_written << endl;
-		cout << "Successful injection." << endl;
-		return true;
+		cout << "Attemting injection..." << endl;
+
+		// Check to make sure the OS allowed the operation
+		SIZE_T num_bytes_read = 0;
+		int count = 0;
+
+		while (true) {
+			if (ReadProcessMemory(hTarget, (DWORD64 *)addr, tmp_buf, op->size(), &num_bytes_read) != 0) {
+				cout << string((char *)tmp_buf) << endl;
+				int i;
+				for (i = 0; i < op->size(); i++) {
+					if (tmp_buf[i] != nop_array[i])
+						break;
+				}
+
+				if (i >= op->size() - 1) {
+					cout << "Bytes written: " << mem_bytes_written << endl;
+					cout << "Successful injection." << endl;
+					return true;
+				}
+			}
+		}
 	} else {
 		cerr << "Failed to inject fault into memory: " << GetLastError() << endl;
 		return false;
