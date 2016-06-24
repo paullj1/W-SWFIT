@@ -40,8 +40,10 @@ bool Function::inject() {
 		it != local_injection_points.end(); ++it) {
 
 		// If the user injects, return true;
-		if (inject(it->second, it->first))
-			return true;
+		//if (inject(it->second, it->first))
+			//return true;
+		inject(it->second, it->first);
+		Sleep(100);
 	}
 	return false;
 }
@@ -50,9 +52,6 @@ bool Function::inject() {
 bool Function::build_injection_points() {
 	find_operators_mfc();
 	//find_operators_ompla();
-
-	// TODO: Other operators
-
 	return true;
 }
 
@@ -117,15 +116,15 @@ bool Function::find_operators_mfc() {
 bool Function::inject(Operator *op, DWORD64 addr) {
 
 	// Ready to continue?
-	string cont = "";
-	printf("Ready to inject %d bytes at: 0x%X\n\n", op->size(), addr);
-	cout << "Continue? [Y|n]: ";
-	getline(cin, cont);
+	//string cont = "";
+	//printf("Ready to inject %d bytes at: 0x%X\n\n", op->size(), addr);
+	//cout << "Continue? [Y|n]: ";
+	//getline(cin, cont);
 
-	if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
-		cout << "Aborting" << endl;
-		return false;
-	}
+	//if (cont.find("n") != string::npos || cont.find("N") != string::npos) {
+		//cout << "Aborting" << endl;
+		//return false;
+	//}
 
 	byte *nop_array = (byte *)malloc(op->size());
 	byte *tmp_buf = (byte *)malloc(op->size());

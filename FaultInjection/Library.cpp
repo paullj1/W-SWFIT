@@ -43,9 +43,11 @@ bool Library::write_library_to_disk(string path) {
 
 bool Library::inject() {
 	// For each function in the module, call public inject funciton
-	for (vector< Function *>::iterator it = functions.begin(); it != functions.end(); ++it) {
-		if ((*it)->inject())
-			return true;
+	while (true) {
+		for (vector< Function *>::iterator it = functions.begin(); it != functions.end(); ++it) {
+			if ((*it)->inject())
+				return true;
+		}
 	}
 	return true;
 }
