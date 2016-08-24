@@ -23,6 +23,11 @@ Then in the new console window:
 
 `FaultInjection.exe`
 
+Dependencies
+---
+* [Capstone](http://www.capstone-engine.org)
+
+
 Contact
 ---
 [Paul Jordan](mailto:paullj1@gmail.com)
