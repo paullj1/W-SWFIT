@@ -5,8 +5,6 @@
 # Date Created:  8 May 2016                                                   #
 # Description: Makefile for the W-SWFIT Resource Leak project.                #
 #                                                                             #
-# Copyright (c) 2016                                                          #
-#                                                                             #
 ###############################################################################
 PROGRAM=resourceleak
 C_FILES:=$(shell find . -iname "*.cpp")

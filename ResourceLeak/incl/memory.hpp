@@ -6,8 +6,6 @@
 /* Date Created:  8 May 2016                                                 */
 /* Description: Header file for the Memory leak class.                       */
 /*                                                                           */
-/* Copyright (c) 2016                                                        */
-/*                                                                           */
 /*****************************************************************************/
 
 #ifndef MEMORY_H

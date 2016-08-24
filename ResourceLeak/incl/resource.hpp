@@ -7,8 +7,6 @@
 /* Description: Abstract resource header file.  Each resource implements     */
 /* abstract class.                                                           */
 /*                                                                           */
-/* Copyright (c) 2016                                                        */
-/*                                                                           */
 /*****************************************************************************/
 
 #ifndef RESOURCE_H

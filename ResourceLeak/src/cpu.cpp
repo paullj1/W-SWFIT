@@ -6,8 +6,6 @@
 /* Date Created:  8 May 2016                                                 */
 /* Description: Implementation file for the CPU leak class.               */
 /*                                                                           */
-/* Copyright (c) 2016                                                        */
-/*                                                                           */
 /*****************************************************************************/
 
 #include "cpu.hpp"
