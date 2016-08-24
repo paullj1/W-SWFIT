@@ -35,6 +35,11 @@ Contact
 
 Disclaimer
 ---
-The views expressed herein are solely those of the authors and do not reflect
-the official policy or position of the U.S. Air Force, the Department of
-Defense, or the U.S. Government.
+*APPROVED FOR PUBLIC RELEASE; DISTRIBUTION UNLIMITED*
+
+The views expressed in this document are those of the author and
+do not reflect the official policy or position of the United States Air Force,
+the United States Department of Defense or the United States Government. 
+
+This material is declared a work of the U.S. Government and is not subject to
+copyright protection in the United States.
