@@ -2,8 +2,7 @@ W-SWFIT
 ===
 
 The Windows Software Fault Injection Tool (x64).  This tool implements the
-[G-SWFIT technique](http://dx.doi.org/10.1109/TSE.2006.113) by [Dr. Joao Duraes](http://ieeexplore.ieee.org/search/searchresult.jsp?searchWithin=%22Authors%22:.QT.J.%20A.%20Duraes.QT.&newsearch=true) and [Dr. Henrique Madeira]
-(http://ieeexplore.ieee.org/search/searchresult.jsp?searchWithin=%22Authors%22:.QT.H.%20S.%20Madeira.QT.&newsearch=true) from the University of Coimbra, Portugal.
+[G-SWFIT technique](http://dx.doi.org/10.1109/TSE.2006.113) by [Dr. Joao Duraes](http://ieeexplore.ieee.org/search/searchresult.jsp?searchWithin=%22Authors%22:.QT.J.%20A.%20Duraes.QT.&newsearch=true) and [Dr. Henrique Madeira](http://ieeexplore.ieee.org/search/searchresult.jsp?searchWithin=%22Authors%22:.QT.H.%20S.%20Madeira.QT.&newsearch=true) from the University of Coimbra, Portugal.
 
 W-SWFIT is designed to perform the G-SWFIT technique against any x64 application in 
 a Windows environment.  It has not been tested against 32-bit applications, but in 
