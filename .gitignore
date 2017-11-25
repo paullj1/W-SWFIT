@@ -228,3 +228,4 @@ Temporary Items
 .apdisk
 
 *.o
+/.vs

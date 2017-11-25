@@ -1,4 +1,5 @@
 // Class definition for the Library object (contains single DLL)
+#pragma once
 
 #ifndef LIBRARY_H
 #define LIBRARY_H

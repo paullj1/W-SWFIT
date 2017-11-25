@@ -1,6 +1,3 @@
-// FaultInjection.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
 #include "globals.h"
 
@@ -79,7 +76,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			size_t bytesRead;
 			size_t sizeToRead = s_query.size();
 			char *buf = (char *)malloc(sizeToRead + 1);
-			ReadProcessMemory(hTarget, ret, buf, sizeToRead, &bytesRead);
+			ReadProcessMemory(hTarget, ret, buf, sizeToRead, (SIZE_T*)&bytesRead);
 			buf[sizeToRead] = '\0';
 
 			cout << "Num bytes read: " << bytesRead << endl;

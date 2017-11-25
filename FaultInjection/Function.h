@@ -1,4 +1,5 @@
 // Class definition for the Funciton object
+#pragma once
 
 #ifndef FUNCTION_H
 #define FUNCTION_H
