@@ -16,8 +16,8 @@
 
 using namespace std;
 
-class Library {
-
+class Library 
+{
 	public:
 		Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path);
 		~Library();

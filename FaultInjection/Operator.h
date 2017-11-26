@@ -10,8 +10,8 @@
 
 using namespace std;
 
-class Operator {
-
+class Operator 
+{
 	public:
 		Operator(const byte *pattern, DWORD64 size);
 		~Operator();

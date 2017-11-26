@@ -13,8 +13,8 @@
 
 using namespace std;
 
-class Function {
-
+class Function 
+{
 	public:
 		Function(HANDLE _target, DWORD64 _start, DWORD64 _end, byte *_code);
 		~Function();
@@ -41,7 +41,6 @@ class Function {
 		// Build map of injectable points
 		bool find_operators_mfc();
 		bool find_operators_ompla();
-
 };
 
 #endif
