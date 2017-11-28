@@ -145,7 +145,7 @@ bool Function::inject(Operator *op, DWORD64 addr) const
 		nop_array = static_cast<byte *>(malloc(op->size()));
 		tmp_buf = static_cast<byte *>(malloc(op->size()));
 	}
-	catch(std::bad_alloc&)
+	catch(bad_alloc&)
 	{
 		cout << "Failed to allocate memory: " << GetLastError() << endl;
 		return false;

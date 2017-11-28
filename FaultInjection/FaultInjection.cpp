@@ -86,7 +86,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			{
 				buf = static_cast<char *>(malloc(sizeToRead + 1));
 			}
-			catch (std::bad_alloc&)
+			catch (bad_alloc&)
 			{
 				cout << "Failed to allocate memory: " << GetLastError() << endl;
 				return 1;
