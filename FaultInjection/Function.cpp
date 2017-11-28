@@ -9,7 +9,7 @@ Function::Function(HANDLE _target, DWORD64 _start, DWORD64 _end, byte *_code)
 	end_addr = _end;
 	size = end_addr - start_addr;
 	buf = _code;
-	local_injection_points = map < DWORD64, Operator *>();
+	local_injection_points = map <DWORD64, Operator*>();
 
 	// Build Capstone (CS) Array of code
 	if (cs_open(CS_ARCH_X86, CS_MODE_64, &cs_handle) != CS_ERR_OK)
