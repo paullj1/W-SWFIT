@@ -108,6 +108,9 @@
       <AdditionalDependencies>capstone/capstone.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/NODEFAULTLIB:library %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SolutionDir)faultinjection\capstone\capstone.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -145,6 +148,9 @@
       <AdditionalDependencies>capstone/capstone.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/NODEFAULTLIB:library %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SolutionDir)faultinjection\capstone\capstone.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
