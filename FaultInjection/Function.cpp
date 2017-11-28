@@ -127,7 +127,7 @@ bool Function::find_operators_mfc()
 	return true;
 }
 
-bool Function::inject(Operator *op, DWORD64 addr) 
+bool Function::inject(Operator *op, DWORD64 addr) const
 {
 	// Ready to continue?
 	//string cont = "";
@@ -139,13 +139,22 @@ bool Function::inject(Operator *op, DWORD64 addr)
 		//cout << "Aborting" << endl;
 		//return false;
 	//}
+	byte *nop_array, *tmp_buf;
+	try
+	{
+		nop_array = static_cast<byte *>(malloc(op->size()));
+		tmp_buf = static_cast<byte *>(malloc(op->size()));
+	}
+	catch(std::bad_alloc&)
+	{
+		cout << "Failed to allocate memory: " << GetLastError() << endl;
+		return false;
+	}
 
-	byte *nop_array = (byte *)malloc(op->size());
-	byte *tmp_buf = (byte *)malloc(op->size());
 	fill_n(nop_array, op->size(), 0x90);
 
 	SIZE_T mem_bytes_written = 0;
-	if (WriteProcessMemory(hTarget, (LPVOID)addr, nop_array, op->size(), &mem_bytes_written) != 0) {
+	if (WriteProcessMemory(hTarget, reinterpret_cast<LPVOID>(addr), nop_array, op->size(), &mem_bytes_written) != 0) {
 		cout << "Attemting injection..." << endl;
 
 		// Check to make sure the OS allowed the operation
@@ -154,9 +163,9 @@ bool Function::inject(Operator *op, DWORD64 addr)
 
 		while (true) 
 		{
-			if (ReadProcessMemory(hTarget, (DWORD64 *)addr, tmp_buf, op->size(), &num_bytes_read) != 0) 
+			if (ReadProcessMemory(hTarget, reinterpret_cast<DWORD64 *>(addr), tmp_buf, op->size(), &num_bytes_read) != 0) 
 			{
-				cout << string((char *)tmp_buf) << endl;
+				cout << string(reinterpret_cast<char *>(tmp_buf)) << endl;
 				int i;
 				for (i = 0; i < op->size(); i++) 
 				{
@@ -172,11 +181,7 @@ bool Function::inject(Operator *op, DWORD64 addr)
 				}
 			}
 		}
-	} 
-	else 
-	{
-		cerr << "Failed to inject fault into memory: " << GetLastError() << endl;
-		return false;
 	}
+	cerr << "Failed to inject fault into memory: " << GetLastError() << endl;
 	return false;
 }

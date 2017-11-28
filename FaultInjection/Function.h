@@ -36,7 +36,7 @@ class Function
 
 		bool build_injection_points();
 		bool perform_injection(DWORD64 addr);
-		bool inject(Operator *op, DWORD64 addr);
+		bool inject(Operator *op, DWORD64 addr) const;
 
 		// Build map of injectable points
 		bool find_operators_mfc();

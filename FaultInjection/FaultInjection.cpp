@@ -33,7 +33,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (aProcesses[i] != 0) 
 		{
 			HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, aProcesses[i]);
-			if (hProc != NULL) 
+			if (hProc != nullptr) 
 			{
 				HMODULE hMod;
 				DWORD cbNeededMod;
@@ -74,37 +74,45 @@ int _tmain(int argc, _TCHAR* argv[])
 		char* ret = GetAddressOfData(hTarget, s_query.c_str(), s_query.length());
 		if (ret) 
 		{
-			cout << "Found at addr: " << (void*)ret << endl;
+			cout << "Found at addr: " << static_cast<void*>(ret) << endl;
 			size_t bytesRead;
 			size_t sizeToRead = s_query.size();
-			char *buf = (char *)malloc(sizeToRead + 1);
-			ReadProcessMemory(hTarget, ret, buf, sizeToRead, (SIZE_T*)&bytesRead);
+			if(sizeToRead <= 0)
+			{
+				return 1;
+			}
+			char *buf; 
+			try
+			{
+				buf = static_cast<char *>(malloc(sizeToRead + 1));
+			}
+			catch (std::bad_alloc&)
+			{
+				cout << "Failed to allocate memory: " << GetLastError() << endl;
+				return 1;
+			}
+	
+			ReadProcessMemory(hTarget, ret, buf, sizeToRead, static_cast<SIZE_T*>(&bytesRead));
 			buf[sizeToRead] = '\0';
 
 			cout << "Num bytes read: " << bytesRead << endl;
 			cout << "Contents: " << string(buf) << endl;
 
 			// Overwrite it
-			byte *null_array = (byte *)malloc(bytesRead);
+			byte *null_array = static_cast<byte *>(malloc(bytesRead));
 			fill_n(null_array, bytesRead, 0x00);
 
 			SIZE_T mem_bytes_written = 0;
-			if (WriteProcessMemory(hTarget, (LPVOID)ret, null_array, bytesRead, &mem_bytes_written) != 0) 
+			if (WriteProcessMemory(hTarget, static_cast<LPVOID>(ret), null_array, bytesRead, &mem_bytes_written) != 0) 
 			{
 				cout << "Bytes written: " << mem_bytes_written << endl;
 				cout << "Successful corruption." << endl;
 				return 0;
-			} 
-			else 
-			{
-				cerr << "Failed to corrupt memory: " << GetLastError() << endl;
-				return -1;
 			}
-		} 
-		else 
-		{
-			cout << "Not found" << endl;
+			cerr << "Failed to corrupt memory: " << GetLastError() << endl;
+			return -1;
 		}
+		cout << "Not found" << endl;
 		return 0;
 	}
 
@@ -139,7 +147,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	getline(cin, s_mod_id);
 	int mod_id = stoi(s_mod_id);
 
-	MODULEINFO lModInfo = { 0 };
+	MODULEINFO lModInfo = { nullptr };
 	cout << "Dll Information:" << endl;
 	if (GetModuleInformation(hTarget, hmods[mod_id], &lModInfo, sizeof(lModInfo)))
 	{
@@ -158,8 +166,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	GetModuleFileNameEx(hTarget, hmods[mod_id], szModName, sizeof(szModName) / sizeof(TCHAR));
 
 	// Build library object
-	Library *library = new Library(hTarget, (DWORD64)lModInfo.lpBaseOfDll, 
-									lModInfo.SizeOfImage, string((char *)&szModName));
+	Library *library = new Library(hTarget, reinterpret_cast<DWORD64>(lModInfo.lpBaseOfDll), 
+									lModInfo.SizeOfImage, string(reinterpret_cast<char *>(&szModName)));
 
 	// Save library for future static analysis
 	library->write_library_to_disk("C:\\memdump.dll");
@@ -196,7 +204,7 @@ bool SendSyslog()
 	clientService.sin_addr.s_addr = inet_addr("192.168.1.9");
 	clientService.sin_port = htons(514);
 	
-	iResult = connect(ConnectSocket, (SOCKADDR *)&clientService, sizeof(clientService));
+	iResult = connect(ConnectSocket, reinterpret_cast<SOCKADDR *>(&clientService), sizeof(clientService));
 	if (iResult == SOCKET_ERROR) 
 	{
 		cerr << "Couldn't send syslog message" << endl;
@@ -206,7 +214,7 @@ bool SendSyslog()
 	}
 
 	char *sendbuf = "FAULT_INJECTED_SUCCESSFULLY";
-	iResult = send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0);
+	iResult = send(ConnectSocket, sendbuf, static_cast<int>(strlen(sendbuf)), 0);
 	if (iResult == SOCKET_ERROR) 
 	{
 		cerr << "Couldn't send syslog message" << endl;
@@ -228,23 +236,23 @@ char* GetAddressOfData(HANDLE process, const char *data, size_t len)
 
 	MEMORY_BASIC_INFORMATION info;
 	vector<char> chunk;
-	char* p = 0;
+	char* p = nullptr;
 	while(p < si.lpMaximumApplicationAddress) 
 	{
 	  if(VirtualQueryEx(process, p, &info, sizeof(info)) == sizeof(info)) 
 	  {
-		p = (char*)info.BaseAddress;
+		p = static_cast<char*>(info.BaseAddress);
 		chunk.resize(info.RegionSize);
 		SIZE_T bytesRead;
 
 		if(ReadProcessMemory(process, p, &chunk[0], info.RegionSize, &bytesRead)) 
 		  for(size_t i = 0; i < (bytesRead - len); ++i) 
 			if(memcmp(data, &chunk[i], len) == 0)
-			  return (char*)p + i;
+			  return static_cast<char*>(p) + i;
 			 
 		p += info.RegionSize;
 		
 	  }
 	}
-	return 0;
+	return nullptr;
 }

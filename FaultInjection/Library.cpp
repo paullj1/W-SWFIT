@@ -7,7 +7,7 @@ Library::Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path)
 	start_addr = _start;
 	image_size = _size;
 	name = _path;
-	buf = (byte *)malloc(image_size);
+	buf = static_cast<byte *>(malloc(image_size));
 	function_patterns = map < Operator *, Operator * >();
 	functions = vector < Function *>();
 
@@ -30,7 +30,7 @@ Library::~Library()
 }
 
 // PUBLIC FUNCTIONS
-bool Library::write_library_to_disk(string path) 
+bool Library::write_library_to_disk(const string& path) const
 {
 	cout << "Writing static copy of memory contents for analysis to " << path << endl;
 	FILE *fp;
@@ -60,22 +60,17 @@ bool Library::inject()
 }
 
 // PRIVATE FUNCTIONS
-bool Library::read_memory_into_bufer() 
+bool Library::read_memory_into_bufer() const
 {
 	SIZE_T num_bytes_read = 0;
 	int count = 0;
 
-	if (ReadProcessMemory(hTarget, (DWORD64 *)start_addr, buf, image_size, &num_bytes_read) != 0) 
+	if (ReadProcessMemory(hTarget, reinterpret_cast<DWORD64 *>(start_addr), buf, image_size, &num_bytes_read) != 0) 
 	{
 		cout << "Buffered memory contents. Got " << num_bytes_read << " bytes." << endl << endl;
 		return true;
 	}
-	else 
-	{
-		cout << "Failed to read memory: " << GetLastError() << endl;
-		return false;
-	}
-
+	cout << "Failed to read memory: " << GetLastError() << endl;
 	return false;
 }
 
@@ -129,7 +124,7 @@ bool Library::find_functions()
 }
 
 // Search 'buf' for 'pattern' at 'start'.  If found, sets 'offset', and returns true.
-bool Library::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *location) 
+bool Library::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *location) const
 {
 	const byte *pattern = op->pattern();
 	for (DWORD64 i = start; i < stop; i++) 

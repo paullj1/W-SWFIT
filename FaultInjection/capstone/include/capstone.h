@@ -61,7 +61,7 @@ extern "C" {
 
 // Macro to create combined version which can be compared to
 // result of cs_version() API.
-#define CS_MAKE_VERSION(major, minor) ((major << 8) + minor)
+#define CS_MAKE_VERSION(major, minor) (((major) << 8) + (minor))
 
 // Handle using with all API
 typedef size_t csh;
@@ -288,7 +288,7 @@ typedef struct cs_insn {
 // Calculate the offset of a disassembled instruction in its buffer, given its position
 // in its array of disassembled insn
 // NOTE: this macro works with position (>=1), not index
-#define CS_INSN_OFFSET(insns, post) (insns[post - 1].address - insns[0].address)
+#define CS_INSN_OFFSET(insns, post) (insns[(post) - 1].address - insns[0].address)
 
 
 // All type of errors encountered by Capstone API.
