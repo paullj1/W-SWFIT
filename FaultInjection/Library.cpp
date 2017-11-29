@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "Process.h"
 
-Library::Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path) 
+Library::Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path) : name(std::move(_path))
 {
 	hTarget = _target;
 	start_addr = _start;
 	image_size = _size;
-	name = _path;
 	buf = static_cast<byte *>(malloc(image_size));
 	function_patterns = map < Operator *, Operator * >();
 	functions = vector < Function *>();
@@ -131,7 +130,7 @@ bool Library::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *l
 	{
 		if (buf[i] == pattern[0]) 
 		{
-			for (int j = 1; j < op->size(); j++) 
+			for (size_t j = 1; j < op->size(); j++) 
 			{
 				if (buf[i + j] != pattern[j])
 					break;

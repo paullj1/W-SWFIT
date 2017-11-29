@@ -31,7 +31,7 @@ class Library
 		map <Operator *, Operator *> function_patterns; // Vector of function patterns
 		byte *buf; // Buffer for memory contents
 		DWORD64 start_addr = 0;
-		DWORD image_size = 0;
+		DWORD64 image_size = 0;
 		HANDLE hTarget;
 
 		bool read_memory_into_bufer() const;

@@ -166,7 +166,7 @@ bool Function::inject(Operator *op, DWORD64 addr) const
 			if (ReadProcessMemory(hTarget, reinterpret_cast<DWORD64 *>(addr), tmp_buf, op->size(), &num_bytes_read) != 0) 
 			{
 				cout << string(reinterpret_cast<char *>(tmp_buf)) << endl;
-				int i;
+				size_t i;
 				for (i = 0; i < op->size(); i++) 
 				{
 					if (tmp_buf[i] != nop_array[i])
