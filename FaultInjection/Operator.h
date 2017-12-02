@@ -1,5 +1,6 @@
 // Class definition for the Operator object 
 // This object contains a byte array and a size
+#pragma once
 
 #ifndef OPERATOR_H
 #define OPERATOR_H
@@ -9,8 +10,8 @@
 
 using namespace std;
 
-class Operator {
-
+class Operator 
+{
 	public:
 		Operator(const byte *pattern, DWORD64 size);
 		~Operator();

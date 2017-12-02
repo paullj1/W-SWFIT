@@ -1,16 +1,17 @@
 #include "stdafx.h"
 #include "Process.h"
 
-Library::Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path) {
+Library::Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path) : name(std::move(_path))
+{
 	hTarget = _target;
 	start_addr = _start;
 	image_size = _size;
-	name = _path;
-	buf = (byte *)malloc(image_size);
+	buf = static_cast<byte *>(malloc(image_size));
 	function_patterns = map < Operator *, Operator * >();
 	functions = vector < Function *>();
 
-	if (!buf) {
+	if (!buf) 
+	{
 		cerr << "Failed to allocate space for memory contents: " << GetLastError() << endl;
 		CloseHandle(hTarget);
 		return;
@@ -21,19 +22,21 @@ Library::Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path) {
 }
 
 
-Library::~Library() {
+Library::~Library() 
+{
 	free(buf);
 	CloseHandle(hTarget);
 }
 
 // PUBLIC FUNCTIONS
-bool Library::write_library_to_disk(string path) {
-
+bool Library::write_library_to_disk(const string& path) const
+{
 	cout << "Writing static copy of memory contents for analysis to " << path << endl;
 	FILE *fp;
 	fopen_s(&fp, path.c_str(), "w");
 	SIZE_T bytes_written = 0;
-	while (bytes_written < image_size) {
+	while (bytes_written < image_size) 
+	{
 		bytes_written += fwrite(buf, 1, image_size, fp);
 	}
 	fclose(fp);
@@ -41,10 +44,13 @@ bool Library::write_library_to_disk(string path) {
 	return true;
 }
 
-bool Library::inject() {
+bool Library::inject() 
+{
 	// For each function in the module, call public inject funciton
-	while (true) {
-		for (vector< Function *>::iterator it = functions.begin(); it != functions.end(); ++it) {
+	while (true) 
+	{
+		for (vector< Function *>::iterator it = functions.begin(); it != functions.end(); ++it) 
+		{
 			if ((*it)->inject())
 				return true;
 		}
@@ -53,22 +59,22 @@ bool Library::inject() {
 }
 
 // PRIVATE FUNCTIONS
-bool Library::read_memory_into_bufer() {
+bool Library::read_memory_into_bufer() const
+{
 	SIZE_T num_bytes_read = 0;
 	int count = 0;
 
-	if (ReadProcessMemory(hTarget, (DWORD64 *)start_addr, buf, image_size, &num_bytes_read) != 0) {
+	if (ReadProcessMemory(hTarget, reinterpret_cast<DWORD64 *>(start_addr), buf, image_size, &num_bytes_read) != 0) 
+	{
 		cout << "Buffered memory contents. Got " << num_bytes_read << " bytes." << endl << endl;
 		return true;
 	}
-	else {
-		cout << "Failed to read memory: " << GetLastError() << endl;
-		return false;
-	}
+	cout << "Failed to read memory: " << GetLastError() << endl;
 	return false;
 }
 
-bool Library::build_operator_map() {
+bool Library::build_operator_map() 
+{
 	function_patterns[new Operator(start_pattern_1, sizeof(start_pattern_1))] =
 		new Operator(end_pattern_1, sizeof(end_pattern_1));
 	function_patterns[new Operator(start_pattern_2, sizeof(start_pattern_2))] =
@@ -96,15 +102,17 @@ bool Library::build_operator_map() {
 	return true;
 }
 
-bool Library::find_functions() {
+bool Library::find_functions() 
+{
 	for (map < Operator *, Operator * >::iterator it = function_patterns.begin();
-			it != function_patterns.end(); ++it ) {
-
+			it != function_patterns.end(); ++it ) 
+	{
 		DWORD64 begin = 0;
-		while (find_pattern(it->first, begin, image_size, &begin)) {
-
+		while (find_pattern(it->first, begin, image_size, &begin)) 
+		{
 			DWORD64 end = 0;
-			if (find_pattern(it->second, begin, image_size, &end)) {
+			if (find_pattern(it->second, begin, image_size, &end)) 
+			{
 				functions.push_back(new Function(hTarget, start_addr + begin + (it->first)->size(), 
 												 start_addr + end - (it->second)->size(), &buf[begin]));
 			}
@@ -115,12 +123,15 @@ bool Library::find_functions() {
 }
 
 // Search 'buf' for 'pattern' at 'start'.  If found, sets 'offset', and returns true.
-bool Library::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *location) {
-
+bool Library::find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *location) const
+{
 	const byte *pattern = op->pattern();
-	for (DWORD64 i = start; i < stop; i++) {
-		if (buf[i] == pattern[0]) {
-			for (int j = 1; j < op->size(); j++) {
+	for (DWORD64 i = start; i < stop; i++) 
+	{
+		if (buf[i] == pattern[0]) 
+		{
+			for (size_t j = 1; j < op->size(); j++) 
+			{
 				if (buf[i + j] != pattern[j])
 					break;
 				if (j < op->size() - 1)

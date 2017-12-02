@@ -1,4 +1,5 @@
 // Class definition for the Library object (contains single DLL)
+#pragma once
 
 #ifndef LIBRARY_H
 #define LIBRARY_H
@@ -15,28 +16,28 @@
 
 using namespace std;
 
-class Library {
-
+class Library 
+{
 	public:
 		Library(HANDLE _target, DWORD64 _start, DWORD _size, string _path);
 		~Library();
 
-		bool write_library_to_disk(string path);
+		bool write_library_to_disk(const string& path) const;
 		bool inject();
 
 	private:
 		string name; // Name of library
-		vector < Function * > functions; // Vector (list) of functions in library
-		map < Operator *, Operator * > function_patterns; // Vector of function patterns
+		vector <Function *> functions; // Vector (list) of functions in library
+		map <Operator *, Operator *> function_patterns; // Vector of function patterns
 		byte *buf; // Buffer for memory contents
 		DWORD64 start_addr = 0;
-		DWORD image_size = 0;
+		DWORD64 image_size = 0;
 		HANDLE hTarget;
 
-		bool read_memory_into_bufer();
+		bool read_memory_into_bufer() const;
 		bool build_operator_map();
 		bool find_functions();
-		bool find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *location);
+		bool find_pattern(Operator *op, DWORD64 start, DWORD64 stop, DWORD64 *location) const;
 };
 
 #endif
